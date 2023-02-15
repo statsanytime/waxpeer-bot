@@ -4,8 +4,6 @@ import { manager, sendOffer, cancelOffer } from './steam.js';
 import { sendNotification } from './notifications.js';
 import 'dotenv/config';
 
-const ws = new WebSocket('wss://wssex.waxpeer.com');
-
 interface JsonTradeofferAsset {
     appid: number;
     contextid: string;
@@ -27,6 +25,10 @@ interface JsonTradeoffer {
         ready: boolean;
     };
 }
+
+let reconnectAttemptsLeft: number = 5;
+let reconnectAttemptDelay: number[] = [0, 5000, 10000, 20000, 30000];
+let ws: WebSocket;
 
 async function handleSendTrade(data: any) {
     const offer = manager.createOffer(data.tradelink);
@@ -61,31 +63,60 @@ function handleCancelTrade(data: any) {
     });
 }
 
-ws.on('open', function open() {
-    sendNotification('Connected to Waxpeer WebSocket');
+function connect() {
+    ws = new WebSocket('wss://wssex.waxpeer.com');
 
-    ws.send(JSON.stringify({
-        "name": "auth",
-        "steamid": process.env.STEAM_ID,
-        "apiKey": process.env.WAXPEER_API_KEY,
-        "tradeurl": process.env.STEAM_TRADE_LINK,
-    }));
-
-    setInterval(() => {
+    ws.on('open', function open() {
+        sendNotification('Connected to Waxpeer WebSocket');
+    
         ws.send(JSON.stringify({
-            "name": "ping",
+            "name": "auth",
+            "steamid": process.env.STEAM_ID,
+            "apiKey": process.env.WAXPEER_API_KEY,
+            "tradeurl": process.env.STEAM_TRADE_LINK,
         }));
-    }, 25000);
-});
+    
+        setInterval(() => {
+            ws.send(JSON.stringify({
+                "name": "ping",
+            }));
+        }, 25000);
 
-ws.on('message', function message(data) {
-    let message = JSON.parse(data.toString());
+        reconnectAttemptsLeft = 5;
+    });
+    
+    ws.on('message', function message(data) {
+        let message = JSON.parse(data.toString());
+    
+        if (message.name === 'send-trade') {
+            handleSendTrade(message.data);
+        }
+    
+        if (message.name === 'cancelTrade') {
+            handleCancelTrade(message.data);
+        }
+    });
+    
+    ws.on('close', function close() {
+        if (reconnectAttemptsLeft > 0) {
+            let delay = reconnectAttemptDelay[5 - reconnectAttemptsLeft];
 
-    if (message.name === 'send-trade') {
-        handleSendTrade(message.data);
-    }
+            sendNotification(`Disconnected from Waxpeer WebSocket. Reconnecting in ${delay / 1000} seconds...`);
 
-    if (message.name === 'cancelTrade') {
-        handleCancelTrade(message.data);
-    }
-});
+            setTimeout(() => {
+                connect();
+            }, delay);
+
+            reconnectAttemptsLeft--;
+        } else {
+            sendNotification('Disconnected from Waxpeer WebSocket. Reconnecting failed.');
+        }
+    });
+
+    ws.on('error', function error(err) {
+        sendNotification('Error connecting to Waxpeer WebSocket');
+        console.error(err);
+    });
+}
+
+connect();

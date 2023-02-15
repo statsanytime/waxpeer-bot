@@ -1,5 +1,4 @@
 import WebSocket from 'ws';
-import TradeOfferManager from 'steam-tradeoffer-manager';
 import { manager, sendOffer, cancelOffer } from './steam.js';
 import { sendNotification } from './notifications.js';
 import 'dotenv/config';

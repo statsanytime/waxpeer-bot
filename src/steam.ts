@@ -40,6 +40,8 @@ client.on('webSession', (sessionID: any, cookies: any) => {
 
         sendNotification('Trade offer manager cookies set');
     });
+
+    community.setCookies(cookies);
 });
 
 export function sendOffer(offer: TradeOfferManager.TradeOffer) {

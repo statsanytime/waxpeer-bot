@@ -56,7 +56,7 @@ ws.on('open', function open() {
         "name": "auth",
         "steamid": process.env.STEAM_ID,
         "apiKey": process.env.WAXPEER_API_KEY,
-        "tradelink": process.env.STEAM_TRADE_LINK,
+        "tradeurl": process.env.STEAM_TRADE_LINK,
     }));
 
     setInterval(() => {

@@ -7,6 +7,7 @@ import SteamCommunity from 'steamcommunity';
 // @ts-ignore
 import TradeOfferManager from 'steam-tradeoffer-manager';
 import { sendNotification } from './notifications.js';
+import { retry } from './utils.js';
 import 'dotenv/config';
 
 interface SentTradeOffers {
@@ -76,17 +77,27 @@ export function sendOffer(offer: TradeOfferManager.TradeOffer) {
             if (status === 'pending') {
                 sendNotification(`Offer #${offer.id} needs confirmation.`);
 
-                community.acceptConfirmationForObject(process.env.STEAM_IDENTITY_SECRET, offer.id, function(err: any) {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
+                retry(() => {
+                    return new Promise((resolve, reject) => {
+                        community.acceptConfirmationForObject(process.env.STEAM_IDENTITY_SECRET, offer.id, function(err: any) {
+                            if (err) {
+                                reject(err);
+                                return;
+                            }
 
+                            resolve(offer);
+                        });
+                    });
+                }, 3, 5000)
+                .then(() => {
                     sentTradeOffers[offer.id] = offer;
-
+    
                     sendNotification(`Offer ${offer.id} confirmed`);
 
                     resolve(offer);
+                })
+                .catch((err: any) => {
+                    reject(err);
                 });
             }
         });

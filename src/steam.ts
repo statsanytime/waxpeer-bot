@@ -44,6 +44,10 @@ client.on('webSession', (sessionID: any, cookies: any) => {
     community.setCookies(cookies);
 });
 
+manager.on('sentOfferChanged', function(offer: TradeOfferManager.TradeOffer, oldState: TradeOfferManager.ETradeOfferState) {
+	sendNotification(`Offer #${offer.id} changed: ${TradeOfferManager.ETradeOfferState[oldState]} -> ${TradeOfferManager.ETradeOfferState[offer.state]}`);
+});
+
 export function sendOffer(offer: TradeOfferManager.TradeOffer) {
     return new Promise((resolve, reject) => {
         offer.send((err: any, status: string) => {

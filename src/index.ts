@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
-import { manager, sendOffer } from './steam.js';
+import TradeOfferManager from 'steam-tradeoffer-manager';
+import { manager, sendOffer, cancelOffer } from './steam.js';
 import { sendNotification } from './notifications.js';
 import 'dotenv/config';
 
@@ -49,6 +50,17 @@ async function handleSendTrade(data: any) {
     });
 }
 
+function handleCancelTrade(data: any) {
+    cancelOffer(data.trade_id)
+    .then(() => {
+        sendNotification(`Cancelled trade ${data.trade_id}`);
+    })
+    .catch((err: any) => {
+        sendNotification(err.message || `Error cancelling trade ${data.trade_id}. Please cancel it manually.`);
+        console.error(err);
+    });
+}
+
 ws.on('open', function open() {
     sendNotification('Connected to Waxpeer WebSocket');
 
@@ -71,5 +83,9 @@ ws.on('message', function message(data) {
 
     if (message.name === 'send-trade') {
         handleSendTrade(message.data);
+    }
+
+    if (message.name === 'cancelTrade') {
+        handleCancelTrade(message.data);
     }
 });

@@ -9,6 +9,12 @@ import TradeOfferManager from 'steam-tradeoffer-manager';
 import { sendNotification } from './notifications.js';
 import 'dotenv/config';
 
+interface SentTradeOffers {
+    [key: string]: TradeOfferManager.TradeOffer,
+}
+
+const sentTradeOffers: SentTradeOffers = {};
+
 let client = new SteamUser();
 
 let manager = new TradeOfferManager({
@@ -56,6 +62,8 @@ export function sendOffer(offer: TradeOfferManager.TradeOffer) {
                 return;
             }
 
+            sentTradeOffers[offer.id] = offer;
+
             sendNotification(`Sent offer. Status: ${status}.`);
 
             if (status === 'pending') {
@@ -67,12 +75,57 @@ export function sendOffer(offer: TradeOfferManager.TradeOffer) {
                         return;
                     }
 
+                    sentTradeOffers[offer.id] = offer;
+
                     sendNotification(`Offer ${offer.id} confirmed`);
 
                     resolve(offer);
                 });
             }
         });
+    });
+}
+
+export function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
+    let cached = sentTradeOffers[offerId];
+
+    if (cached) {
+        return cached;
+    }
+
+    return new Promise((resolve, reject) => {
+        manager.getOffer(offerId, (err: any, offer: TradeOfferManager.TradeOffer) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(offer);
+        });
+    });
+}
+
+export async function cancelOffer(offerId: string) {
+    return new Promise((resolve, reject) => {
+        getOffer(offerId)
+            .then((offer: TradeOfferManager.TradeOffer) => {
+                if (!offer) {
+                    reject(`Offer ${offerId} could not be found and therefore cannot be cancelled. Please cancel it manually.`);
+                    return;
+                }
+
+                offer.cancel((err: any) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+
+                    delete sentTradeOffers[offerId];
+                    resolve(offer);
+                });
+            }).catch((err: any) => {
+                reject(err);
+            });
     });
 }
 

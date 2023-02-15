@@ -54,6 +54,13 @@ manager.on('sentOfferChanged', function(offer: TradeOfferManager.TradeOffer, old
 	sendNotification(`Offer #${offer.id} changed: ${TradeOfferManager.ETradeOfferState[oldState]} -> ${TradeOfferManager.ETradeOfferState[offer.state]}`);
 });
 
+community.on('sessionExpired', function(err: any) {
+    sendNotification('Steam session expired');
+    console.error(err);
+
+    client.webLogOn();
+});
+
 export function sendOffer(offer: TradeOfferManager.TradeOffer) {
     return new Promise((resolve, reject) => {
         offer.send((err: any, status: string) => {

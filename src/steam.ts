@@ -53,7 +53,9 @@ client.on('webSession', (sessionID: any, cookies: any) => {
 });
 
 manager.on('sentOfferChanged', function(offer: TradeOfferManager.TradeOffer, oldState: TradeOfferManager.ETradeOfferState) {
-	sendNotification(`Offer #${offer.id} changed: ${TradeOfferManager.ETradeOfferState[oldState]} -> ${TradeOfferManager.ETradeOfferState[offer.state]}`);
+    if (sentTradeOffers[offer.id]) {
+	    sendNotification(`Offer #${offer.id} changed: ${TradeOfferManager.ETradeOfferState[oldState]} -> ${TradeOfferManager.ETradeOfferState[offer.state]}`);
+    }
 });
 
 community.on('sessionExpired', function(err: any) {

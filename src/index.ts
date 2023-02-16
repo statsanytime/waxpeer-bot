@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { manager, sendOffer, cancelOffer } from './steam.js';
+import { manager, sendOffer, cancelOffer, login as loginSteam } from './steam.js';
 import { sendNotification } from './notifications.js';
 import 'dotenv/config';
 
@@ -118,4 +118,5 @@ function connect() {
     });
 }
 
+loginSteam();
 connect();

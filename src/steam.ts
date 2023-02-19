@@ -135,23 +135,18 @@ export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
     }
 }
 
-export function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
+export async function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
     let cached = sentTradeOffers[offerId];
 
     if (cached) {
         return cached;
     }
 
-    return new Promise((resolve, reject) => {
-        manager.getOffer(offerId, (err: any, offer: TradeOfferManager.TradeOffer) => {
-            if (err) {
-                reject(err);
-                return;
-            }
+    let getOfferPromiseFn = util.promisify(manager.getOffer.bind(manager));
 
-            resolve(offer);
-        });
-    });
+    let offer: TradeOfferManager.TradeOffer = await retry(() => getOfferPromiseFn(offerId), 3, 5000);
+
+    return offer;
 }
 
 export async function cancelOffer(offerId: string) {

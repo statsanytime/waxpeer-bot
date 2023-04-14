@@ -29,9 +29,9 @@ const manager: TradeOfferManager = new TradeOfferManager({
 });
 
 async function getSession(): Promise<LoginSession> {
-    let session = new LoginSession(EAuthTokenPlatformType.SteamClient);
+    const session = new LoginSession(EAuthTokenPlatformType.SteamClient);
 
-    let startResult = await session.startWithCredentials({
+    const startResult = await session.startWithCredentials({
         accountName: process.env.STEAM_USERNAME,
         password: process.env.STEAM_PASSWORD,
     });
@@ -43,7 +43,7 @@ async function getSession(): Promise<LoginSession> {
             throw new Error('Device code is not a valid action for signing in.');
         }
 
-        let code = SteamTotp.getAuthCode(process.env.STEAM_SHARED_SECRET);
+        const code = SteamTotp.getAuthCode(process.env.STEAM_SHARED_SECRET);
 
         await session.submitSteamGuardCode(code);
 
@@ -76,9 +76,9 @@ async function authenticateSession(session: LoginSession): Promise<LoginSession>
 }
 
 async function refreshWebCookies(session: LoginSession) {
-    let webCookies = await session.getWebCookies();
+    const webCookies = await session.getWebCookies();
 
-    let managerSetCookiesFn = util.promisify(manager.setCookies.bind(manager));
+    const managerSetCookiesFn = util.promisify(manager.setCookies.bind(manager));
 
     try {
         await managerSetCookiesFn(webCookies);
@@ -91,7 +91,7 @@ async function refreshWebCookies(session: LoginSession) {
 }
 
 async function login() {
-    let session = await getSession();
+    const session = await getSession();
 
     await authenticateSession(session);
 
@@ -114,9 +114,9 @@ async function login() {
 }
 
 export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
-    let sendTradeOfferPromiseFn = util.promisify(offer.send.bind(offer));
+    const sendTradeOfferPromiseFn = util.promisify(offer.send.bind(offer));
 
-    let status = await retry(() => sendTradeOfferPromiseFn(), 3, 5000);
+    const status = await retry(() => sendTradeOfferPromiseFn(), 3, 5000);
 
     sentTradeOffers[offer.id] = offer;
 
@@ -138,17 +138,15 @@ export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
 }
 
 export async function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
-    let cached = sentTradeOffers[offerId];
+    const cached = sentTradeOffers[offerId];
 
     if (cached) {
         return cached;
     }
 
-    let getOfferPromiseFn = util.promisify(manager.getOffer.bind(manager));
+    const getOfferPromiseFn = util.promisify(manager.getOffer.bind(manager));
 
-    let offer: TradeOfferManager.TradeOffer = await retry(() => getOfferPromiseFn(offerId), 3, 5000);
-
-    return offer;
+    return retry(() => getOfferPromiseFn(offerId), 3, 5000);
 }
 
 export async function cancelOffer(offerId: string) {

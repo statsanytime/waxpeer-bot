@@ -1,10 +1,6 @@
-// @ts-ignore
 import SteamUser from 'steam-user';
-// @ts-ignore
 import SteamTotp from 'steam-totp';
-// @ts-ignore
 import SteamCommunity from 'steamcommunity';
-// @ts-ignore
 import TradeOfferManager from 'steam-tradeoffer-manager';
 import { EAuthSessionGuardType, EAuthTokenPlatformType, LoginSession } from 'steam-session';
 import { sendNotification } from './notifications.js';
@@ -12,8 +8,9 @@ import { retry } from './utils.js';
 import util from 'util';
 import 'dotenv/config';
 
+type TradeOffer = ReturnType<TradeOfferManager["createOffer"]>;
 interface SentTradeOffers {
-    [key: string]: TradeOfferManager.TradeOffer,
+    [key: string]: TradeOffer,
 }
 
 const sentTradeOffers: SentTradeOffers = {};
@@ -113,7 +110,7 @@ async function login() {
     });
 }
 
-export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
+export async function sendOffer(offer: TradeOffer) {
     let sendTradeOfferPromiseFn = util.promisify(offer.send.bind(offer));
 
     let status = await retry(() => sendTradeOfferPromiseFn(), 3, 5000);
@@ -137,24 +134,22 @@ export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
     return offer;
 }
 
-export async function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
+export async function getOffer(offerId: string) {
     let cached = sentTradeOffers[offerId];
 
     if (cached) {
         return cached;
     }
 
-    let getOfferPromiseFn = util.promisify(manager.getOffer.bind(manager));
+    let getOfferPromiseFn = util.promisify<string, TradeOffer|null>(manager.getOffer.bind(manager));
 
-    let offer: TradeOfferManager.TradeOffer = await retry(() => getOfferPromiseFn(offerId), 3, 5000);
-
-    return offer;
+    return retry(() => getOfferPromiseFn(offerId), 3, 5000);
 }
 
 export async function cancelOffer(offerId: string) {
     return new Promise((resolve, reject) => {
         getOffer(offerId)
-            .then((offer: TradeOfferManager.TradeOffer) => {
+            .then((offer: TradeOffer) => {
                 if (!offer) {
                     reject(`Offer ${offerId} could not be found and therefore cannot be cancelled. Please cancel it manually.`);
                     return;

@@ -4,7 +4,7 @@ import { sendNotification } from './notifications.js';
 import 'dotenv/config';
 
 interface JsonTradeofferAsset {
-    appid: number;
+    appid: string;
     contextid: string;
     amount: number;
     assetid: string;

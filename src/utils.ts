@@ -1,5 +1,5 @@
-export function retry(fn, attempts = 3, delay = 2000) {
-    return new Promise((resolve, reject) => {
+export function retry<T>(fn: (...args: any) => Promise<T>, attempts = 3, delay = 2000) {
+    return new Promise<T>((resolve, reject) => {
         fn().then(resolve).catch((err: any) => {
             if (attempts <= 1) {
                 reject(err);

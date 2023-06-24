@@ -1,10 +1,6 @@
-// @ts-ignore
 import SteamUser from 'steam-user';
-// @ts-ignore
 import SteamTotp from 'steam-totp';
-// @ts-ignore
 import SteamCommunity from 'steamcommunity';
-// @ts-ignore
 import TradeOfferManager from 'steam-tradeoffer-manager';
 import { EAuthSessionGuardType, EAuthTokenPlatformType, LoginSession } from 'steam-session';
 import { sendNotification } from './notifications.js';
@@ -12,8 +8,9 @@ import { retry } from './utils.js';
 import util from 'util';
 import 'dotenv/config';
 
+type TradeOffer = ReturnType<TradeOfferManager["createOffer"]>;
 interface SentTradeOffers {
-    [key: string]: TradeOfferManager.TradeOffer,
+    [key: string]: TradeOffer,
 }
 
 const sentTradeOffers: SentTradeOffers = {};
@@ -29,9 +26,9 @@ const manager: TradeOfferManager = new TradeOfferManager({
 });
 
 async function getSession(): Promise<LoginSession> {
-    let session = new LoginSession(EAuthTokenPlatformType.SteamClient);
+    const session = new LoginSession(EAuthTokenPlatformType.SteamClient);
 
-    let startResult = await session.startWithCredentials({
+    const startResult = await session.startWithCredentials({
         accountName: process.env.STEAM_USERNAME,
         password: process.env.STEAM_PASSWORD,
     });
@@ -43,7 +40,7 @@ async function getSession(): Promise<LoginSession> {
             throw new Error('Device code is not a valid action for signing in.');
         }
 
-        let code = SteamTotp.getAuthCode(process.env.STEAM_SHARED_SECRET);
+        const code = SteamTotp.getAuthCode(process.env.STEAM_SHARED_SECRET);
 
         await session.submitSteamGuardCode(code);
 
@@ -76,9 +73,9 @@ async function authenticateSession(session: LoginSession): Promise<LoginSession>
 }
 
 async function refreshWebCookies(session: LoginSession) {
-    let webCookies = await session.getWebCookies();
+    const webCookies = await session.getWebCookies();
 
-    let managerSetCookiesFn = util.promisify(manager.setCookies.bind(manager));
+    const managerSetCookiesFn = util.promisify(manager.setCookies.bind(manager));
 
     try {
         await managerSetCookiesFn(webCookies);
@@ -91,7 +88,7 @@ async function refreshWebCookies(session: LoginSession) {
 }
 
 async function login() {
-    let session = await getSession();
+    const session = await getSession();
 
     await authenticateSession(session);
 
@@ -113,10 +110,10 @@ async function login() {
     });
 }
 
-export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
-    let sendTradeOfferPromiseFn = util.promisify(offer.send.bind(offer));
+export async function sendOffer(offer: TradeOffer) {
+    const sendTradeOfferPromiseFn = util.promisify(offer.send.bind(offer));
 
-    let status = await retry(() => sendTradeOfferPromiseFn(), 3, 5000);
+    const status = await retry(() => sendTradeOfferPromiseFn(), 3, 5000);
 
     sentTradeOffers[offer.id] = offer;
 
@@ -137,24 +134,22 @@ export async function sendOffer(offer: TradeOfferManager.TradeOffer) {
     return offer;
 }
 
-export async function getOffer(offerId: string): Promise<TradeOfferManager.TradeOffer|null> {
-    let cached = sentTradeOffers[offerId];
+export async function getOffer(offerId: string) {
+    const cached = sentTradeOffers[offerId];
 
     if (cached) {
         return cached;
     }
 
-    let getOfferPromiseFn = util.promisify(manager.getOffer.bind(manager));
+    const getOfferPromiseFn = util.promisify<string, TradeOffer|null>(manager.getOffer.bind(manager));
 
-    let offer: TradeOfferManager.TradeOffer = await retry(() => getOfferPromiseFn(offerId), 3, 5000);
-
-    return offer;
+    return retry(() => getOfferPromiseFn(offerId), 3, 5000);
 }
 
 export async function cancelOffer(offerId: string) {
     return new Promise((resolve, reject) => {
         getOffer(offerId)
-            .then((offer: TradeOfferManager.TradeOffer) => {
+            .then((offer: TradeOffer) => {
                 if (!offer) {
                     reject(`Offer ${offerId} could not be found and therefore cannot be cancelled. Please cancel it manually.`);
                     return;
